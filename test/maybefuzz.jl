@@ -30,7 +30,7 @@ end
 
 if NON_STDLIB_TESTS
     function maybefuzz()
-        isstyled(s) = StyledStrings.styled(s) isa Base.AnnotatedString
+        isstyled(s) = StyledStrings.styled(s) isa StyledStrings.AnnotatedString
         max_examples = if hasparserdiverged()
             ifelse(IS_CI, 5_000, 10_000)
         else

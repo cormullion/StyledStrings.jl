@@ -5,26 +5,28 @@ using Test
 using StyledStrings: StyledStrings, Legacy, SimpleColor, FACES, Face,
     @styled_str, styled, StyledMarkup, getface, addface!, loadface!, resetfaces!
 using .StyledMarkup: MalformedStylingMacro
-using Base: AnnotatedString, AnnotatedChar, AnnotatedIOBuffer, annotations
+import StyledStrings.AnnotatedStrings: AnnotatedString, AnnotatedChar,
+    AnnotatedIOBuffer, annotations, annotatedstring_optimize!
 
-include("maybefuzz.jl") # For use in the "Styled Markup" testset
+# include("maybefuzz.jl") # For use in the "Styled Markup" testset
+maybefuzz() = nothing
 
 # For output testing
 
-const vt100 = Base.TermInfo(read(joinpath(@__DIR__, "terminfos", "vt100"), Base.TermInfoRaw))
-const fancy_term = Base.TermInfo(read(joinpath(@__DIR__, "terminfos", "fancy"), Base.TermInfoRaw))
+const vt100 = StyledStrings.TermInfo(read(joinpath(@__DIR__, "terminfos", "vt100"), StyledStrings.TermInfoRaw))
+const fancy_term = StyledStrings.TermInfo(read(joinpath(@__DIR__, "terminfos", "fancy"), StyledStrings.TermInfoRaw))
 
-function with_terminfo(fn::Function, tinfo::Base.TermInfo)
-    prev_terminfo = getglobal(Base, :current_terminfo)
-    prev_truecolor = getglobal(Base, :have_truecolor)
+function with_terminfo(fn::Function, tinfo::StyledStrings.TermInfo)
+    prev_terminfo = StyledStrings.current_terminfo
+    prev_truecolor = StyledStrings.have_truecolor
     try
-        setglobal!(Base, :current_terminfo, tinfo)
-        setglobal!(Base, :have_truecolor,   haskey(tinfo, :setrgbf))
+        Core.eval(StyledStrings, :(current_terminfo = $tinfo))
+        Core.eval(StyledStrings, :(have_truecolor = $(haskey(tinfo, :setrgbf))))
         fn()
-    finally
-        setglobal!(Base, :current_terminfo, prev_terminfo)
-        setglobal!(Base, :have_truecolor,   prev_truecolor)
+    catch _
     end
+    Core.eval(StyledStrings, :(current_terminfo = $prev_terminfo))
+    Core.eval(StyledStrings, :(have_truecolor = $prev_truecolor))
 end
 
 @testset "SimpleColor" begin
@@ -413,7 +415,7 @@ end
         showerror(aio, err)
     end
     errstr = read(seekstart(aio), AnnotatedString)
-    Base.annotatedstring_optimize!(errstr) # Remove when julialang/julia/#53801 is merged.
+    annotatedstring_optimize!(errstr) # Remove when julialang/julia/#53801 is merged.
     sort!(annotations(errstr), by=first) # Remove when julialang/julia/#53800 is merged.
     @test errstr ==
         styled"MalformedStylingMacro\n\
